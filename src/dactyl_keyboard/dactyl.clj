@@ -3,7 +3,11 @@
   (:require [clojure.core.matrix :refer [array matrix mmul]]
             [scad-clj.scad :refer :all]
             [scad-clj.model :refer :all]
-            [unicode-math.core :refer :all]))
+            [unicode-math.core :refer :all]
+            [clj-yaml.core :as yaml]))
+
+
+
 
 (defn deg2rad [degrees]
   (* (/ degrees 180) pi))
@@ -12,18 +16,16 @@
 ;; Shape parameters ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-(def nrows 5)
+(def nrows 4)
 (def ncols 6)
 
-(def α (/ π 12))                        ; curvature of the columns
-(def β (/ π 36))                        ; curvature of the rows
 (def centerrow (- nrows 3))             ; controls front-back tilt
 (def centercol 2)                       ; controls left-right tilt / tenting (higher number is more tenting)
 (def tenting-angle (/ π 12))            ; or, change this for more precise tenting control
 (def column-style
   (if (> nrows 5) :orthographic :standard))  ; options include :standard, :orthographic, and :fixed
 ; (def column-style :fixed)
-(def pinky-15u true)
+(def pinky-15u false)
 
 (defn column-offset [column] (cond
                                (= column 2) [0 2.82 -4.5]
@@ -32,14 +34,14 @@
 
 (def thumb-offsets [6 -3 7])
 
-(def keyboard-z-offset 9)               ; controls overall height; original=9 with centercol=3; use 16 for centercol=2
+(def keyboard-z-offset 16)              ; controls overall height; original=9 with centercol=3; use 16 for centercol=2
 
 (def extra-width 2.5)                   ; extra space between the base of keys; original= 2
 (def extra-height 1.0)                  ; original= 0.5
 
 (def wall-z-offset -5)                 ; original=-15 length of the first downward-sloping part of the wall (negative)
 (def wall-xy-offset 5)                  ; offset in the x and/or y direction for the first downward-sloping part of the wall (negative)
-(def wall-thickness 2)                  ; wall thickness parameter; originally 5
+(def wall-thickness 3)                  ; wall thickness parameter; originally 5
 
 ;; Settings for column-style == :fixed
 ;; The defaults roughly match Maltron settings
@@ -714,13 +716,13 @@
                                screw-insert-holes))
                   (translate [0 0 -20] (cube 350 350 40))))
 
-(spit "things/right.scad"
+(spit "output/right.scad"
       (write-scad model-right))
 
-(spit "things/left.scad"
+(spit "output/left.scad"
       (write-scad (mirror [-1 0 0] model-right)))
 
-(spit "things/right-test.scad"
+(spit "output/right-test.scad"
       (write-scad
        (difference
         (union
@@ -736,7 +738,7 @@
 
         (translate [0 0 -20] (cube 350 350 40)))))
 
-(spit "things/right-plate.scad"
+(spit "output/right-plate.scad"
       (write-scad
        (cut
         (translate [0 0 -0.1]
@@ -745,8 +747,8 @@
                                       screw-insert-outers)
                                (translate [0 0 -10] screw-insert-screw-holes))))))
 
-(spit "things/test.scad"
+(spit "output/test.scad"
       (write-scad
        (difference trrs-holder trrs-holder-hole)))
 
-(defn -main [dum] 1)  ; dummy to make it easier to batch
+(defn -main [dump] 1)  ; dummy to make it easier to batch
