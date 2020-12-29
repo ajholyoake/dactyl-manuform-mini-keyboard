@@ -19,6 +19,8 @@
 (def nrows 4)
 (def ncols 6)
 
+(def column-curvature (/ π 12))                        ; curvature of the columns
+(def row-curvature (/ π 36))                        ; curvature of the rows
 (def centerrow (- nrows 3))             ; controls front-back tilt
 (def centercol 2)                       ; controls left-right tilt / tenting (higher number is more tenting)
 (def tenting-angle (/ π 12))            ; or, change this for more precise tenting control
@@ -166,20 +168,20 @@
 
 (def cap-top-height (+ plate-thickness sa-profile-key-height))
 (def row-radius (+ (/ (/ (+ mount-height extra-height) 2)
-                      (Math/sin (/ α 2)))
+                      (Math/sin (/ column-curvature 2)))
                    cap-top-height))
 (def column-radius (+ (/ (/ (+ mount-width extra-width) 2)
-                         (Math/sin (/ β 2)))
+                         (Math/sin (/ row-curvature 2)))
                       cap-top-height))
-(def column-x-delta (+ -1 (- (* column-radius (Math/sin β)))))
+(def column-x-delta (+ -1 (- (* column-radius (Math/sin row-curvature)))))
 
 (defn offset-for-column [col]
   (if (and (true? pinky-15u) (= col lastcol)) 5.5 0))
 (defn apply-key-geometry [translate-fn rotate-x-fn rotate-y-fn column row shape]
-  (let [column-angle (* β (- centercol column))
+  (let [column-angle (* row-curvature (- centercol column))
         placed-shape (->> shape
                           (translate-fn [(offset-for-column column) 0 (- row-radius)])
-                          (rotate-x-fn  (* α (- centerrow row)))
+                          (rotate-x-fn  (* column-curvature (- centerrow row)))
                           (translate-fn [0 0 row-radius])
                           (translate-fn [0 0 (- column-radius)])
                           (rotate-y-fn  column-angle)
@@ -188,7 +190,7 @@
         column-z-delta (* column-radius (- 1 (Math/cos column-angle)))
         placed-shape-ortho (->> shape
                                 (translate-fn [0 0 (- row-radius)])
-                                (rotate-x-fn  (* α (- centerrow row)))
+                                (rotate-x-fn  (* column-curvature (- centerrow row)))
                                 (translate-fn [0 0 row-radius])
                                 (rotate-y-fn  column-angle)
                                 (translate-fn [(- (* (- column centercol) column-x-delta)) 0 column-z-delta])
@@ -197,7 +199,7 @@
                                 (rotate-y-fn  (nth fixed-angles column))
                                 (translate-fn [(nth fixed-x column) 0 (nth fixed-z column)])
                                 (translate-fn [0 0 (- (+ row-radius (nth fixed-z column)))])
-                                (rotate-x-fn  (* α (- centerrow row)))
+                                (rotate-x-fn  (* column-curvature (- centerrow row)))
                                 (translate-fn [0 0 (+ row-radius (nth fixed-z column))])
                                 (rotate-y-fn  fixed-tenting)
                                 (translate-fn [0 (second (column-offset column)) 0]))]
@@ -591,35 +593,56 @@
 
 (def usb-holder-ref (key-position 0 0 (map - (wall-locate2  0  -1) [0 (/ mount-height 2) 0])))
 
-(def usb-holder-position (map + [17 19.3 0] [(first usb-holder-ref) (second usb-holder-ref) 2]))
-(def usb-holder-cube   (cube 15 12 2))
+(def usb-holder-position (map + [19 19 0] [(first usb-holder-ref) (second usb-holder-ref) 2]))
+
+
+(def usb-holder-cube   (cube 15 12 3))
+
 (def usb-holder-space  (translate (map + usb-holder-position [0 (* -1 wall-thickness) 1]) usb-holder-cube))
-(def usb-holder-holder (translate usb-holder-position (cube 19 12 4)))
 
-(def usb-jack (translate (map + usb-holder-position [0 10 3]) (cube 8.1 20 3.1)))
+(def usb-holder-holder (translate usb-holder-position (cube 17 20 8)))
 
-(def pro-micro-position (map + (key-position 0 1 (wall-locate3 -1 0)) [-6 2 -15]))
-(def pro-micro-space-size [4 10 12]) ; z has no wall;
+(def usb-jack-size [6.25 11 16.5])
+(def usb-jack (->> (union (let [cyl (binding [*fn* 30] (cylinder (/ (first usb-jack-size) 2) (last usb-jack-size)))]
+                            (hull cyl (translate [(- (second usb-jack-size) (first usb-jack-size)) 0 0] cyl)))
+                          (->> (binding [*fn* 30] (cylinder 2.2 30)) (translate [(/ (- (second usb-jack-size) (first usb-jack-size)) 2) 0])))
+                   (rotate (deg2rad  90) [1 0 0])
+                   (translate (map + usb-holder-position [-2 2 3]))
+                   ))
+
+(def pro-micro-position (map + (key-position 0 2 (wall-locate3 -1 0)) [-5 -10 -15]))
+(def pro-micro-space-size [5 10 12]) ; z has no wall;
 (def pro-micro-wall-thickness 2)
 (def pro-micro-holder-size [(+ pro-micro-wall-thickness (first pro-micro-space-size)) (+ pro-micro-wall-thickness (second pro-micro-space-size)) (last pro-micro-space-size)])
 (def pro-micro-space
-  (->> (cube (first pro-micro-space-size) (second pro-micro-space-size) (last pro-micro-space-size))
-       (translate [(- (first pro-micro-position) (/ pro-micro-wall-thickness 2)) (- (second pro-micro-position) (/ pro-micro-wall-thickness 2)) (last pro-micro-position)])))
+  (->> (cube (first pro-micro-space-size) (+ (second pro-micro-space-size) 1) (+ (last pro-micro-space-size) 1))
+       (translate [(- (first pro-micro-position) (/ pro-micro-wall-thickness 2)) 
+                   (+ (second pro-micro-position) (/ pro-micro-wall-thickness 2))
+                   (last pro-micro-position)])))
+
 (def pro-micro-holder
   (difference
    (->> (cube (first pro-micro-holder-size) (second pro-micro-holder-size) (last pro-micro-holder-size))
         (translate [(first pro-micro-position) (second pro-micro-position) (last pro-micro-position)]))
    pro-micro-space))
 
-(def trrs-holder-size [6.2 10 2]) ; trrs jack PJ-320A
-(def trrs-holder-hole-size [6.2 10 6]) ; trrs jack PJ-320A
-(def trrs-holder-position  (map + usb-holder-position [-13.6 0 0]))
+(def trrs-holder-size [7 (+ 16 wall-thickness) 2]) ; trrs jack PJ-320A
+(def trrs-holder-hole-size [7 16 6]) ; trrs jack PJ-320A
+
+(def trrs-holder-position  (map + usb-holder-position [-14 -1.2 0]))
+
 (def trrs-holder-thickness 2)
-(def trrs-holder-thickness-2x (* 2 trrs-holder-thickness))
 (def trrs-holder
   (union
-   (->> (cube (+ (first trrs-holder-size) trrs-holder-thickness-2x) (+ trrs-holder-thickness (second trrs-holder-size)) (+ (last trrs-holder-size) trrs-holder-thickness))
-        (translate [(first trrs-holder-position) (second trrs-holder-position) (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2)]))))
+   (->>
+    (cube (+ (first trrs-holder-size) (* 2 trrs-holder-thickness))
+          (+ (second trrs-holder-size) trrs-holder-thickness)
+          (+ (last trrs-holder-size) trrs-holder-thickness))
+    (translate [(first trrs-holder-position)
+                (second trrs-holder-position)
+                (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2)]
+               ))))
+
 (def trrs-holder-hole
   (union
 
@@ -627,10 +650,19 @@
    (->>
     (->> (binding [*fn* 30] (cylinder 2.55 20))) ; 5mm trrs jack
     (rotate (deg2rad  90) [1 0 0])
-    (translate [(first trrs-holder-position) (+ (second trrs-holder-position) (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2)) (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))])) ;1.5 padding
+    (translate [(first trrs-holder-position)
+                (+ (second trrs-holder-position)
+                   (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2))
+                (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))] ;1.5 padding
+               )
+    ) 
 
   ; rectangular trrs holder
-   (->> (apply cube trrs-holder-hole-size) (translate [(first trrs-holder-position) (+ (/ trrs-holder-thickness -2) (second trrs-holder-position)) (+ (/ (last trrs-holder-hole-size) 2) trrs-holder-thickness)]))))
+   (->>
+    (apply cube trrs-holder-hole-size)
+    (translate [(first trrs-holder-position)
+                (+ (/ trrs-holder-thickness -2) (second trrs-holder-position) (- wall-thickness 1.5)) ; this 1.5 should be the wall thickness left for the circular lip on the jack
+                (+ (/ (last trrs-holder-hole-size) 2) trrs-holder-thickness)]))))
 
 (defn screw-insert-shape [bottom-radius top-radius height]
   (union
@@ -709,15 +741,16 @@
                                       screw-insert-outers
                                       pro-micro-holder
                                       usb-holder-holder
-                                      trrs-holder)
-                               usb-holder-space
+                                      trrs-holder
+                                      )
+                               ; usb-holder-space
                                usb-jack
                                trrs-holder-hole
                                screw-insert-holes))
                   (translate [0 0 -20] (cube 350 350 40))))
 
 (spit "output/right.scad"
-      (write-scad model-right))
+      (write-scad (intersection (translate [-30 30 5] (cube 40 60 10)) model-right)))
 
 (spit "output/left.scad"
       (write-scad (mirror [-1 0 0] model-right)))
