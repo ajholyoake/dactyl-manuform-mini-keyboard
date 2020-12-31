@@ -257,7 +257,11 @@
 
 (def web-thickness 2)
 (def post-size 0.1)
+(def wide-size 1)
 (def web-post (->> (cube post-size post-size web-thickness)
+                   (translate [0 0 (+ (/ web-thickness -2)
+                                      plate-thickness)])))
+(def wide-post (->> (cube wide-size wide-size web-thickness)
                    (translate [0 0 (+ (/ web-thickness -2)
                                       plate-thickness)])))
 
@@ -372,12 +376,12 @@
   (union
    (thumb-tr-place shape)))
 
-(def larger-plate
-  (let [plate-height (- (/ (- sa-double-length mount-height) 3) 0.5)
-        top-plate (->> (cube mount-width plate-height web-thickness)
-                       (translate [0 (/ (+ plate-height mount-height) 2)
-                                   (- plate-thickness (/ web-thickness 2))]))]
-    (union top-plate (mirror [0 1 0] top-plate))))
+;(def larger-plate
+;  (let [plate-height (- (/ (- sa-double-length mount-height) 3) 0.5)
+;        top-plate (->> (cube mount-width plate-height web-thickness)
+;                       (translate [0 (/ (+ plate-height mount-height) 2)
+;                                   (- plate-thickness (/ web-thickness 2))]))]
+;    (union top-plate (mirror [0 1 0] top-plate))))
 
 (def thumbcaps
   (union
@@ -391,7 +395,12 @@
   ; (thumb-15x-layout larger-plate)
 ))
 
-(def thumb-post-tr (translate [(- (/ mount-width 2) post-adj)  (- (/ mount-height  2) post-adj) 0] web-post))
+(def thumb-wide-post-tr (translate [(- (/ mount-width 2) post-adj)   (- (/ mount-height  2) post-adj) 0] wide-post))
+(def thumb-wide-post-tl (translate [(+ (/ mount-width -2) post-adj) (- (/ mount-height  2) post-adj) 0] wide-post))
+(def thumb-wide-post-br (translate [(- (/ mount-width 2) post-adj)  (+ (/ mount-height -2) post-adj) 0] web-post))
+
+
+(def thumb-post-tr (translate [(- (/ mount-width 2) post-adj)   (- (/ mount-height  2) post-adj) 0] web-post))
 (def thumb-post-tl (translate [(+ (/ mount-width -2) post-adj) (- (/ mount-height  2) post-adj) 0] web-post))
 (def thumb-post-bl (translate [(+ (/ mount-width -2) post-adj) (+ (/ mount-height -2) post-adj) 0] web-post))
 (def thumb-post-br (translate [(- (/ mount-width 2) post-adj)  (+ (/ mount-height -2) post-adj) 0] web-post))
@@ -401,7 +410,7 @@
    (triangle-hulls    ; top two
     (thumb-tl-place web-post-tr)
     (thumb-tl-place web-post-br)
-    (thumb-tr-place thumb-post-tl)
+    (thumb-tr-place thumb-wide-post-tl)
     (thumb-tr-place thumb-post-bl))
    (triangle-hulls    ; bottom two
     (thumb-br-place web-post-tr)
@@ -411,7 +420,7 @@
    (triangle-hulls
     (thumb-mr-place web-post-tr)
     (thumb-mr-place web-post-br)
-    (thumb-tr-place thumb-post-br))
+    (thumb-tr-place thumb-wide-post-br))
    (triangle-hulls    ; between top row and bottom row
     (thumb-br-place web-post-tl)
     (thumb-bl-place web-post-bl)
@@ -423,7 +432,7 @@
     (thumb-tl-place web-post-br)
     (thumb-tr-place web-post-bl)
     (thumb-mr-place web-post-tr)
-    (thumb-tr-place web-post-br))
+    (thumb-tr-place wide-post-br))
    (triangle-hulls    ; top two to the middle two, starting on the left
     (thumb-tl-place web-post-tl)
     (thumb-bl-place web-post-tr)
@@ -438,15 +447,15 @@
     (key-place 0 cornerrow web-post-bl)
     (thumb-tl-place web-post-tr)
     (key-place 0 cornerrow web-post-br)
-    (thumb-tr-place thumb-post-tl)
+    (thumb-tr-place thumb-wide-post-tl)
     (key-place 1 cornerrow web-post-bl)
-    (thumb-tr-place thumb-post-tr)
+    (thumb-tr-place thumb-wide-post-tr)
     (key-place 1 cornerrow web-post-br)
     (key-place 2 lastrow web-post-tl)
     (key-place 2 lastrow web-post-bl)
-    (thumb-tr-place thumb-post-tr)
+    (thumb-tr-place thumb-wide-post-tr)
     (key-place 2 lastrow web-post-bl)
-    (thumb-tr-place thumb-post-br)
+    (thumb-tr-place thumb-wide-post-br)
     (key-place 2 lastrow web-post-br)
     (key-place 3 lastrow web-post-bl)
     (key-place 2 lastrow web-post-tr)
@@ -466,7 +475,8 @@
     (key-place 3 lastrow web-post-tr)
     (key-place 3 lastrow web-post-br)
     (key-place 3 lastrow web-post-tr)
-    (key-place 4 cornerrow web-post-bl))))
+    (key-place 4 cornerrow web-post-bl))
+   ))
 
 ;;;;;;;;;;
 ;; Case ;;
@@ -610,7 +620,7 @@
                    (translate (map + usb-holder-position [-2 2 3]))
                    ))
 
-(def pro-micro-position (map + (key-position 0 2 (wall-locate3 -1 0)) [-5 -10 -15]))
+(def pro-micro-position (map + (key-position 0 2 (wall-locate3 -1 0)) [-6 -10 -15]))
 (def pro-micro-space-size [5 10 12]) ; z has no wall;
 (def pro-micro-wall-thickness 2)
 (def pro-micro-holder-size [(+ pro-micro-wall-thickness (first pro-micro-space-size)) (+ pro-micro-wall-thickness (second pro-micro-space-size)) (last pro-micro-space-size)])
@@ -627,9 +637,9 @@
    pro-micro-space))
 
 (def trrs-holder-size [7 (+ 16 wall-thickness) 2]) ; trrs jack PJ-320A
-(def trrs-holder-hole-size [7 16 6]) ; trrs jack PJ-320A
+(def trrs-holder-hole-size [9 18 8]) ; trrs jack PJ-320A
 
-(def trrs-holder-position  (map + usb-holder-position [-14 -1.2 0]))
+(def trrs-holder-position  (map + usb-holder-position [-14 -1.0 0]))
 
 (def trrs-holder-thickness 2)
 (def trrs-holder
@@ -750,7 +760,7 @@
                   (translate [0 0 -20] (cube 350 350 40))))
 
 (spit "output/right.scad"
-      (write-scad (intersection (translate [-30 30 5] (cube 40 60 10)) model-right)))
+      (write-scad model-right))
 
 (spit "output/left.scad"
       (write-scad (mirror [-1 0 0] model-right)))
