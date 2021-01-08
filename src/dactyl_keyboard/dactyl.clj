@@ -116,6 +116,38 @@
       top-nub-pair
       (rotate (/ π 2) [0 0 1])))))
 
+;; Cherry key backs for wiring jig
+(def key-back
+  (let [top-wall (->> (cube (+ keyswitch-width 3) 1.5 plate-thickness)
+                      (translate [0
+                                  (+ (/ 1.5 2) (/ keyswitch-height 2))
+                                  (/ plate-thickness 2)]))
+        left-wall (->> (cube 1.5 (+ keyswitch-height 3) plate-thickness)
+                       (translate [(+ (/ 1.5 2) (/ keyswitch-width 2))
+                                   0
+                                   (/ plate-thickness 2)]))
+        plate-half (union top-wall left-wall)
+        stop (->> (binding [*fn* 30] (cylinder 6 5)) (translate [0 0 (+ -2.5 plate-thickness)]))
+        stop2 (->> (binding [*fn* 30] (cylinder 6 50)) (translate [0 0 25]))
+        groove (->> (cube 40 4 2) (translate [0 0 -2.1]))
+        post (->> (binding [*fn* 30] (cylinder [(/ 3.95 2) 2.2] 6)) (translate [0 0 (+ -6 plate-thickness)]))
+        brace (->> (cube 17.9 7 3) (rotate (/ π 2) [0 0 1]) (translate [0 0 5]))
+        clip1 (->> (cube 2.0 5 12) (rotate (/ π 2) [0 0 1]) (translate [0 (+ 1 (/ 17.9 2)) 0]))
+        clip2 (->> (cube 2.0 5 12) (rotate (/ π 2) [0 0 1]) (translate [0 (- (+ 1 (/ 17.9 2))) 0]))
+        ]
+
+    (union (difference (union stop stop2) groove)
+           clip1
+           clip2 
+           post
+           brace
+           ;plate-half
+           ; (->> plate-half
+           ;      (mirror [1 0 0])
+                                        ;      (mirror [0 1 0]))
+           )
+))
+
 ;;;;;;;;;;;;;;;;
 ;; SA Keycaps ;;
 ;;;;;;;;;;;;;;;;
@@ -249,6 +281,17 @@
                :when (or (.contains [2 3] column)
                          (not= row lastrow))]
            (->> (sa-cap (if (and (true? pinky-15u) (= column lastcol)) 1.5 1))
+                (key-place column row)))))
+
+
+;; This is for the jig
+(def key-backs
+  (apply union
+         (for [column columns
+               row rows
+               :when (or (.contains [2 3] column)
+                         (not= row lastrow))]
+           (->> key-back
                 (key-place column row)))))
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -394,6 +437,12 @@
    (thumb-15x-layout single-plate)
   ; (thumb-15x-layout larger-plate)
 ))
+
+(def thumb-key-backs
+  (union 
+  (thumb-1x-layout key-back)
+  (thumb-15x-layout key-back)
+  ))
 
 (def thumb-wide-post-tr (translate [(- (/ mount-width 2) post-adj)   (- (/ mount-height  2) post-adj) 0] wide-post))
 (def thumb-wide-post-tl (translate [(+ (/ mount-width -2) post-adj) (- (/ mount-height  2) post-adj) 0] wide-post))
@@ -758,6 +807,61 @@
                                trrs-holder-hole
                                screw-insert-holes))
                   (translate [0 0 -20] (cube 350 350 40))))
+
+(def jig-right 
+  (let [jig 
+    (difference
+      (->>
+          ;thumb-key-backs
+          key-backs
+      (rotate (deg2rad 180) [0 1 0])
+      (translate [0 0 35])
+      (rotate (deg2rad -10) [0 1 0])
+      )
+      (->> (cube 500 500 500)
+          (translate [0 0 -250])
+          )
+    )
+        big-base (->> (cube 140 80 3) (translate [ 0 0 1.5]))
+        ]
+
+    (union jig (->> big-base (intersection jig) project hull (extrude-linear {:height 2})))
+  )
+)
+
+(def thumb-jig-right 
+  (let [jig 
+        (difference
+         (->>
+          thumb-key-backs
+          (rotate (deg2rad 180) [0 1 0])
+          (translate [-50 60 40])
+          (rotate (deg2rad 20) [0 1 0])
+          (rotate (deg2rad 20) [1 0 0])
+          (translate [0 0 -5])
+          )
+         (->> (cube 500 500 500)
+              (translate [0 0 -250])
+             )
+         )
+        big-base (->> (cube 140 80 3) (translate [ 0 0 1.5]))
+        ]
+
+    (union jig (->> big-base (intersection jig) project hull (extrude-linear {:height 2})))
+    )
+  )
+
+(spit "output/jig-right.scad"
+      (write-scad jig-right))
+
+(spit "output/thumb-jig-right.scad"
+      (write-scad thumb-jig-right))
+
+(spit "output/jig-left.scad"
+      (write-scad (mirror [-1 0 0] jig-right)))
+
+(spit "output/jig-test.scad"
+      (write-scad (->> (intersection key-back (->> (cube 80 80 20) (translate [0 0 -5]))) (rotate (deg2rad 180) [0 1 0]))))
 
 (spit "output/right.scad"
       (write-scad model-right))
